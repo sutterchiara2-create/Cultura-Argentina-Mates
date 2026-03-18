@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cultura Argentina | Mates y Termos</title>
+    <style>
+        /* (Mantiene todos tus estilos, no los toco) */
+        :root {
+            --celeste: #6fb6d6;
+            --celeste-oscuro: #5a9ec0;
+            --blanco: #ffffff;
+            --dorado: #d4a017;
+            --dorado-oscuro: #b88a12;
+            --gris: #333333;
+            --gris-claro: #f5f5f5;
+            --rojo: #e74c3c;
+            --verde: #27ae60;
+            --sombra: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+        body { background:var(--celeste); min-height:100vh; }
+        .header { background:white; padding:20px; text-align:center; }
+        .header img { max-width:120px; }
+        .header h1 { color:var(--gris); margin:10px 0 5px; }
+        .categorias-scroll { background:var(--celeste); overflow:hidden; white-space:nowrap; padding:15px 0; border-bottom:2px solid rgba(255,255,255,0.3); }
+        .categorias-scroll span { display:inline-block; padding:0 30px; color:white; font-weight:bold; animation:scroll 25s linear infinite; }
+        @keyframes scroll { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
+        .main-container { max-width:1200px; margin:0 auto; padding:30px 20px; }
+        .categoria-titulo { color:white; font-size:28px; margin-bottom:20px; border-left:5px solid var(--dorado); padding-left:15px; }
+        .productos-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:25px; }
+        .producto-card { background:white; border-radius:20px; padding:20px; position:relative; display:flex; flex-direction:column; min-height:450px; }
+        .producto-imagen { width:100%; height:180px; object-fit:contain; cursor:pointer; border-radius:10px; background:var(--gris-claro); padding:10px; margin-bottom:15px; }
+        .producto-nombre { font-size:18px; margin:0 0 5px; color:var(--gris); text-align:center; }
+        .producto-categoria { color:#666; font-size:13px; text-align:center; margin-bottom:10px; }
+        .producto-precio { font-size:24px; font-weight:bold; color:var(--dorado); text-align:center; margin:10px 0; }
+        .producto-stock { font-size:14px; padding:5px; border-radius:20px; text-align:center; margin:5px 0; font-weight:bold; }
+        .stock-disponible { background:rgba(39,174,96,0.1); color:var(--verde); }
+        .stock-agotado { background:rgba(231,76,60,0.1); color:var(--rojo); }
+        .btn-agregar { background:var(--celeste); color:white; border:none; padding:12px; border-radius:50px; font-weight:bold; cursor:pointer; width:100%; margin-top:auto; }
+        .btn-agregar:disabled { opacity:0.5; }
+        .btn-consultar { background:#25D366; color:white; border:none; padding:12px; border-radius:50px; font-weight:bold; cursor:pointer; width:100%; margin-top:10px; }
+        .soldout-badge { position:absolute; top:10px; left:10px; background:var(--rojo); color:white; padding:5px 10px; border-radius:20px; font-size:12px; }
+        .cart-icon { position:fixed; top:20px; right:20px; background:var(--dorado); color:white; padding:15px 25px; border-radius:50px; cursor:pointer; z-index:100; font-weight:bold; }
+        .cart-panel { position:fixed; top:80px; right:-350px; width:300px; background:white; border-radius:20px 0 0 20px; padding:20px; transition:0.3s; z-index:99; max-height:80vh; overflow-y:auto; }
+        .cart-panel.open { right:0; }
+        .cart-item { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee; }
+        .cart-item button { background:var(--rojo); color:white; border:none; border-radius:50%; width:25px; height:25px; cursor:pointer; }
+        .btn-whatsapp { background:#25D366; color:white; border:none; padding:15px; border-radius:50px; width:100%; font-weight:bold; cursor:pointer; margin-top:15px; }
+        .social-fixed { position:fixed; right:20px; bottom:20px; display:flex; flex-direction:column; gap:10px; }
+        .social-fixed a { background:white; border-radius:50%; padding:10px; }
+        .social-fixed img { width:40px; height:40px; }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; justify-content:center; align-items:center; }
+        .modal-content { position:relative; max-width:90%; text-align:center; }
+        .modal-content img { max-width:100%; max-height:70vh; border:3px solid white; border-radius:10px; }
+        .modal-description { color:white; margin-top:15px; background:rgba(0,0,0,0.6); padding:15px; border-radius:10px; }
+        .modal-close { position:absolute; top:-40px; right:0; color:white; font-size:40px; cursor:pointer; }
+        .modal-arrow { position:absolute; top:50%; transform:translateY(-50%); color:white; font-size:40px; cursor:pointer; background:rgba(255,255,255,0.2); width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+        .modal-arrow.left { left:-60px; }
+        .modal-arrow.right { right:-60px; }
+        @media (max-width:768px) { .modal-arrow.left { left:10px; } .modal-arrow.right { right:10px; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="Logo.png" alt="Logo">
+        <h1>Cultura Argentina</h1>
+        <p>Mates, tradición y estilo argentino</p>
+    </div>
+
+    <div class="categorias-scroll">
+        <span>Mates, Termos, Bombillas, Set matero de yerbatero y azucarero de lata, Canastas</span>
+    </div>
+
+    <div class="cart-icon" onclick="toggleCart()">🛒 <span id="cartCount">0</span></div>
+    <div class="cart-panel" id="cartPanel">
+        <h3>Tu carrito</h3>
+        <div id="cartItems"></div>
+        <div class="cart-total" id="cartTotal">Total: $0</div>
+        <button class="btn-whatsapp" onclick="sendWhatsApp()">✅ Finalizar compra</button>
+    </div>
+
+    <div class="main-container" id="productsContainer">
+        <div style="text-align:center; color:white;">Cargando productos...</div>
+    </div>
+
+    <div class="social-fixed">
+        <a href="https://wa.me/2604231863" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/733/733585.png"></a>
+        <a href="https://www.instagram.com/cultura.argentina_sr" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png"></a>
+    </div>
+
+    <div class="modal" id="modal" onclick="cerrarModalSiClickFuera(event)">
+        <div class="modal-content">
+            <span class="modal-close" onclick="cerrarModal()">×</span>
+            <span class="modal-arrow left" onclick="imagenAnterior()">❮</span>
+            <img id="modalImage" src="">
+            <span class="modal-arrow right" onclick="imagenSiguiente()">❯</span>
+            <div class="modal-description" id="modalDescription"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CLIENTE - VERSIÓN FORZADA PARA TODOS LOS DISPOSITIVOS
+        // ============================================
+        
+        const STORAGE_KEY = 'productos';
+        const VERSION_KEY = 'productos_version';
+        
+        let productos = [];
+        let carrito = [];
+        let ultimaVersion = null;
+        let imagenesModal = [];
+        let indiceImagenActual = 0;
+
+        const productsContainer = document.getElementById('productsContainer');
+        const cartPanel = document.getElementById('cartPanel');
+        const cartItems = document.getElementById('cartItems');
+        const cartCount = document.getElementById('cartCount');
+        const cartTotal = document.getElementById('cartTotal');
+        const modal = document.getElementById('modal');
+        const modalImage = document.getElementById('modalImage');
+        const modalDescription = document.getElementById('modalDescription');
+
+        // ============================================
+        // CARGAR PRODUCTOS - FORZADO CADA 2 SEGUNDOS
+        // ============================================
+        function cargarProductos() {
+            console.log('🔄 Leyendo productos...');
+            
+            try {
+                const productosGuardados = localStorage.getItem(STORAGE_KEY);
+                const versionActual = localStorage.getItem(VERSION_KEY);
+                
+                if (productosGuardados) {
+                    const nuevosProductos = JSON.parse(productosGuardados);
+                    
+                    // COMPARAR CON LA VERSIÓN ANTERIOR
+                    if (versionActual !== ultimaVersion) {
+                        console.log('✅ Cambios detectados! Actualizando...');
+                        productos = nuevosProductos;
+                        ultimaVersion = versionActual;
+                        renderizarProductos();
+                    } else if (productos.length === 0) {
+                        productos = nuevosProductos;
+                        renderizarProductos();
+                    }
+                } else {
+                    if (productos.length > 0) {
+                        productos = [];
+                        renderizarProductos();
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // ============================================
+        // VERIFICAR CADA 2 SEGUNDOS
+        // ============================================
+        setInterval(cargarProductos, 2000);
+
+        // TAMBIÉN AL ENTRAR A LA PÁGINA
+        document.addEventListener('DOMContentLoaded', cargarProductos);
+
+        // AL VOLVER A LA PESTAÑA
+        window.addEventListener('focus', cargarProductos);
+
+        // AL MOSTRAR LA PÁGINA
+        window.addEventListener('pageshow', cargarProductos);
+
+        // ============================================
+        // RENDERIZAR PRODUCTOS
+        // ============================================
+        function renderizarProductos() {
+            if (!productsContainer) return;
+
+            if (!productos || productos.length === 0) {
+                productsContainer.innerHTML = `
+                    <div style="text-align:center; padding:50px; background:white; border-radius:20px;">
+                        <h2 style="color:var(--gris);">No hay productos disponibles</h2>
+                        <p style="color:#666; margin-top:10px;">Visitá el panel de administración para agregar productos.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const categorias = {};
+            productos.forEach(prod => {
+                if (!categorias[prod.categoria]) {
+                    categorias[prod.categoria] = [];
+                }
+                categorias[prod.categoria].push(prod);
+            });
+
+            let html = '';
+
+            Object.keys(categorias).sort().forEach(categoria => {
+                html += `<div class="categoria-section">`;
+                html += `<h2 class="categoria-titulo">${categoria}</h2>`;
+                html += `<div class="productos-grid">`;
+
+                categorias[categoria].forEach(producto => {
+                    const imagen = producto.imagenes && producto.imagenes[0] ? producto.imagenes[0] : 'https://via.placeholder.com/300?text=Sin+imagen';
+                    const precioFormateado = producto.precio.toLocaleString('es-AR');
+                    const stockClass = producto.stock > 0 ? 'stock-disponible' : 'stock-agotado';
+                    const stockTexto = producto.stock > 0 ? `📦 Stock: ${producto.stock}` : '❌ Sin stock';
+                    
+                    const botonAgregar = producto.stock > 0 
+                        ? `<button class="btn-agregar" onclick="agregarAlCarrito('${producto.nombre.replace(/'/g, "\\'")}', ${producto.precio})">🛒 Agregar al carrito</button>`
+                        : `<button class="btn-agregar" disabled>🛒 Sin stock</button>`;
+
+                    html += `
+                        <div class="producto-card">
+                            <img class="producto-imagen" src="${imagen}" onclick='abrirModal(${JSON.stringify(producto.imagenes)}, "${producto.descripcion}")' alt="${producto.nombre}" onerror="this.src='https://via.placeholder.com/300?text=Error'">
+                            <h3 class="producto-nombre">${producto.nombre}</h3>
+                            <div class="producto-categoria">${producto.categoria}</div>
+                            <div class="producto-precio">$${precioFormateado}</div>
+                            <div class="producto-stock ${stockClass}">${stockTexto}</div>
+                            ${botonAgregar}
+                            <button class="btn-consultar" onclick="consultarProducto('${producto.nombre.replace(/'/g, "\\'")}')">📱 Consultar</button>
+                            ${producto.stock === 0 ? '<div class="soldout-badge">SIN STOCK</div>' : ''}
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            });
+
+            productsContainer.innerHTML = html;
+        }
+
+        // ============================================
+        // CARRITO
+        // ============================================
+        window.agregarAlCarrito = function(nombre, precio) {
+            carrito.push({ nombre, precio });
+            actualizarCarrito();
+        };
+
+        function actualizarCarrito() {
+            if (!cartItems || !cartCount || !cartTotal) return;
+            
+            if (carrito.length === 0) {
+                cartItems.innerHTML = '<p style="text-align:center; color:#666;">Vacío</p>';
+                cartCount.textContent = '0';
+                cartTotal.textContent = 'Total: $0';
+                return;
+            }
+            
+            let total = 0;
+            let itemsHtml = '';
+            
+            carrito.forEach((item, index) => {
+                total += item.precio;
+                itemsHtml += `
+                    <div class="cart-item">
+                        <span>${item.nombre}</span>
+                        <span>$${item.precio.toLocaleString('es-AR')} <button onclick="eliminarDelCarrito(${index})">×</button></span>
+                    </div>
+                `;
+            });
+            
+            cartItems.innerHTML = itemsHtml;
+            cartCount.textContent = carrito.length;
+            cartTotal.textContent = `Total: $${total.toLocaleString('es-AR')}`;
+        }
+
+        window.eliminarDelCarrito = function(index) {
+            carrito.splice(index, 1);
+            actualizarCarrito();
+        };
+
+        window.toggleCart = function() {
+            cartPanel.classList.toggle('open');
+        };
+
+        // ============================================
+        // WHATSAPP
+        // ============================================
+        window.sendWhatsApp = function() {
+            if (carrito.length === 0) {
+                alert('Carrito vacío');
+                return;
+            }
+            
+            const total = carrito.reduce((a, b) => a + b.precio, 0);
+            let mensaje = '🧉 Hola! Quiero comprar:\n\n';
+            carrito.forEach(item => {
+                mensaje += `• ${item.nombre} - $${item.precio.toLocaleString('es-AR')}\n`;
+            });
+            mensaje += `\n💰 Total: $${total.toLocaleString('es-AR')}`;
+            
+            window.open(`https://wa.me/2604231863?text=${encodeURIComponent(mensaje)}`, '_blank');
+        };
+
+        window.consultarProducto = function(nombre) {
+            window.open(`https://wa.me/2604231863?text=Hola! Quiero consultar sobre: ${encodeURIComponent(nombre)}`, '_blank');
+        };
+
+        // ============================================
+        // MODAL
+        // ============================================
+        window.abrirModal = function(imagenes, descripcion) {
+            imagenesModal = imagenes && imagenes.length > 0 ? imagenes : ['https://via.placeholder.com/500'];
+            indiceImagenActual = 0;
+            modalImage.src = imagenesModal[0];
+            modalDescription.textContent = descripcion || 'Sin descripción';
+            modal.style.display = 'flex';
+        };
+
+        window.cerrarModal = function() {
+            modal.style.display = 'none';
+        };
+
+        window.cerrarModalSiClickFuera = function(event) {
+            if (event.target === modal) cerrarModal();
+        };
+
+        window.imagenSiguiente = function() {
+            if (imagenesModal.length > 0) {
+                indiceImagenActual = (indiceImagenActual + 1) % imagenesModal.length;
+                modalImage.src = imagenesModal[indiceImagenActual];
+            }
+        };
+
+        window.imagenAnterior = function() {
+            if (imagenesModal.length > 0) {
+                indiceImagenActual = (indiceImagenActual - 1 + imagenesModal.length) % imagenesModal.length;
+                modalImage.src = imagenesModal[indiceImagenActual];
+            }
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') cerrarModal();
+        });
+    </script>
+</body>
+</html>

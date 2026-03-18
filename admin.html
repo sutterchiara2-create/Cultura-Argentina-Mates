@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin · Cultura Argentina</title>
+    <style>
+        /* Mismos estilos que tenías (los dejamos igual) */
+        :root {
+            --celeste: #6fb6d6;
+            --celeste-oscuro: #5a9ec0;
+            --blanco: #ffffff;
+            --dorado: #d4a017;
+            --dorado-oscuro: #b88a12;
+            --gris: #333333;
+            --gris-claro: #f5f5f5;
+            --rojo: #e74c3c;
+            --verde: #27ae60;
+            --sombra: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+        body { background:linear-gradient(135deg, var(--celeste) 0%, #4a8eb0 100%); min-height:100vh; padding:20px; }
+        .container { max-width:1400px; margin:0 auto; }
+        .header { background:var(--blanco); border-radius:20px; padding:25px; margin-bottom:25px; display:flex; align-items:center; justify-content:space-between; }
+        .header-logo { display:flex; align-items:center; gap:15px; }
+        .header-logo img { width:60px; }
+        .finalizar-btn { background:var(--dorado); color:white; border:none; padding:15px 30px; border-radius:50px; font-weight:bold; cursor:pointer; }
+        .nuevo-producto { background:white; border-radius:20px; padding:25px; margin-bottom:25px; }
+        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        .campo { margin-bottom:15px; }
+        .campo label { display:block; margin-bottom:5px; font-weight:bold; }
+        .campo input, .campo textarea { width:100%; padding:10px; border:1px solid #ccc; border-radius:10px; }
+        .agregar-btn { background:var(--verde); color:white; border:none; padding:15px; border-radius:50px; width:100%; max-width:300px; margin:0 auto; display:block; cursor:pointer; }
+        .productos-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(350px,1fr)); gap:20px; margin-top:20px; }
+        .producto-card { background:white; border-radius:20px; padding:20px; }
+        .producto-header { display:flex; justify-content:space-between; border-bottom:2px solid var(--dorado); padding-bottom:10px; margin-bottom:15px; }
+        .stock-badge { padding:5px 10px; border-radius:50px; color:white; font-size:12px; }
+        .stock-badge.disponible { background:var(--verde); }
+        .stock-badge.agotado { background:var(--rojo); }
+        .botones-accion { display:flex; gap:10px; margin-top:15px; }
+        .btn-guardar { background:var(--celeste); color:white; border:none; padding:10px; border-radius:50px; flex:1; cursor:pointer; }
+        .btn-eliminar { background:var(--rojo); color:white; border:none; padding:10px; border-radius:50px; flex:1; cursor:pointer; }
+        .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(100px); background:var(--gris); color:white; padding:15px 30px; border-radius:50px; opacity:0; transition:0.3s; }
+        .toast.mostrar { transform:translateX(-50%) translateY(0); opacity:1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-logo">
+                <img src="Logo.png" alt="Logo">
+                <div>
+                    <h1>Panel Administrativo</h1>
+                    <p>Gestioná los productos</p>
+                </div>
+            </div>
+            <button class="finalizar-btn" id="finalizarBtn">✅ FINALIZAR EDICIÓN</button>
+        </div>
+
+        <div class="nuevo-producto">
+            <h2>➕ Agregar Producto</h2>
+            <div class="grid-2">
+                <div>
+                    <div class="campo"><label>Nombre</label><input type="text" id="nuevoNombre"></div>
+                    <div class="campo"><label>Categoría</label><input type="text" id="nuevaCategoria" value="Mate Imperial"></div>
+                    <div class="campo"><label>Precio</label><input type="number" id="nuevoPrecio" value="0"></div>
+                    <div class="campo"><label>Stock</label><input type="number" id="nuevoStock" value="1"></div>
+                </div>
+                <div>
+                    <div class="campo"><label>Descripción</label><textarea id="nuevaDescripcion"></textarea></div>
+                    <div class="campo"><label>Imágenes</label><textarea id="nuevasImagenes" placeholder="imagen1.png"></textarea></div>
+                </div>
+            </div>
+            <button class="agregar-btn" id="agregarProductoBtn">➕ AGREGAR</button>
+        </div>
+
+        <h2 style="color:white;">📋 Productos</h2>
+        <div id="productosContainer" class="productos-grid"></div>
+    </div>
+    <div id="toast" class="toast">✅ Guardado</div>
+
+    <script>
+        const STORAGE_KEY = 'productos';
+        const VERSION_KEY = 'productos_version';
+        
+        // ============================================
+        // PRODUCTOS INICIALES
+        // ============================================
+        const PRODUCTOS_INICIALES = [
+            {
+                categoria: "Mate Imperial",
+                nombre: "Imperial económico + bombilla",
+                precio: 18000,
+                stock: 5,
+                descripcion: "Mate imperial económico",
+                imagenes: ["imperial-economico-1.png"]
+            },
+            {
+                categoria: "Mate Imperial",
+                nombre: "Imperial premium + bombilla",
+                precio: 28000,
+                stock: 5,
+                descripcion: "Mate imperial premium",
+                imagenes: ["imperial-premium-1.png"]
+            },
+            {
+                categoria: "Mate Camionero",
+                nombre: "Camionero de algarrobo + bombilla",
+                precio: 20000,
+                stock: 5,
+                descripcion: "Mate camionero",
+                imagenes: ["camionero-algarrobo-1.png"]
+            }
+        ];
+
+        // Cargar productos
+        let productos = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!productos || productos.length === 0) {
+            productos = [...PRODUCTOS_INICIALES];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(productos));
+            localStorage.setItem(VERSION_KEY, Date.now().toString());
+        }
+
+        const toast = document.getElementById('toast');
+
+        function mostrarToast(mensaje) {
+            toast.textContent = mensaje;
+            toast.classList.add('mostrar');
+            setTimeout(() => toast.classList.remove('mostrar'), 2000);
+        }
+
+        function renderizarProductos() {
+            const container = document.getElementById('productosContainer');
+            container.innerHTML = '';
+
+            productos.forEach((producto, index) => {
+                const card = document.createElement('div');
+                card.className = 'producto-card';
+                
+                const stockBadge = producto.stock > 0 
+                    ? `<span class="stock-badge disponible">Stock: ${producto.stock}</span>`
+                    : `<span class="stock-badge agotado">AGOTADO</span>`;
+
+                card.innerHTML = `
+                    <div class="producto-header">
+                        <h3>${producto.nombre}</h3>
+                        ${stockBadge}
+                    </div>
+                    <div class="campo"><label>Categoría</label><input type="text" class="edit-categoria" value="${producto.categoria}"></div>
+                    <div class="campo"><label>Nombre</label><input type="text" class="edit-nombre" value="${producto.nombre}"></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="campo"><label>Precio</label><input type="number" class="edit-precio" value="${producto.precio}"></div>
+                        <div class="campo"><label>Stock</label><input type="number" class="edit-stock" value="${producto.stock}"></div>
+                    </div>
+                    <div class="campo"><label>Descripción</label><textarea class="edit-desc">${producto.descripcion}</textarea></div>
+                    <div class="campo"><label>Imágenes</label><textarea class="edit-imagenes">${producto.imagenes.join('\n')}</textarea></div>
+                    <div class="botones-accion">
+                        <button class="btn-guardar" onclick="guardarProducto(${index})">💾 Guardar</button>
+                        <button class="btn-eliminar" onclick="eliminarProducto(${index})">🗑️ Eliminar</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        window.guardarProducto = function(index) {
+            const card = document.querySelectorAll('.producto-card')[index];
+            
+            productos[index] = {
+                categoria: card.querySelector('.edit-categoria').value,
+                nombre: card.querySelector('.edit-nombre').value,
+                precio: parseFloat(card.querySelector('.edit-precio').value),
+                stock: parseInt(card.querySelector('.edit-stock').value),
+                descripcion: card.querySelector('.edit-desc').value,
+                imagenes: card.querySelector('.edit-imagenes').value.split('\n').filter(s => s.trim())
+            };
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(productos));
+            localStorage.setItem(VERSION_KEY, Date.now().toString());
+            mostrarToast('✅ Guardado');
+        };
+
+        window.eliminarProducto = function(index) {
+            if (confirm('¿Eliminar?')) {
+                productos.splice(index, 1);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(productos));
+                localStorage.setItem(VERSION_KEY, Date.now().toString());
+                renderizarProductos();
+                mostrarToast('🗑️ Eliminado');
+            }
+        };
+
+        document.getElementById('agregarProductoBtn').addEventListener('click', () => {
+            const nombre = document.getElementById('nuevoNombre').value.trim();
+            const categoria = document.getElementById('nuevaCategoria').value.trim();
+            const precio = parseFloat(document.getElementById('nuevoPrecio').value);
+            const stock = parseInt(document.getElementById('nuevoStock').value);
+            const descripcion = document.getElementById('nuevaDescripcion').value.trim();
+            const imagenes = document.getElementById('nuevasImagenes').value.split('\n').filter(s => s.trim());
+
+            if (!nombre || !categoria) return alert('Completá nombre y categoría');
+
+            productos.push({
+                categoria, nombre, precio, stock,
+                descripcion: descripcion || 'Sin descripción',
+                imagenes: imagenes.length ? imagenes : ['https://via.placeholder.com/300']
+            });
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(productos));
+            localStorage.setItem(VERSION_KEY, Date.now().toString());
+            renderizarProductos();
+            mostrarToast('✅ Agregado');
+            
+            document.getElementById('nuevoNombre').value = '';
+            document.getElementById('nuevasImagenes').value = '';
+        });
+
+        document.getElementById('finalizarBtn').addEventListener('click', () => {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(productos));
+            localStorage.setItem(VERSION_KEY, Date.now().toString());
+            mostrarToast('✔️ Guardado. Abriendo tienda...');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        });
+
+        renderizarProductos();
+    </script>
+</body>
+</html>
